@@ -3,11 +3,10 @@
 Single source of truth for every coding agent in this repo. Codex (GPT-6 Astra) reads this file natively; Claude Code reads it through `CLAUDE.md`. Humans edit this file. Agents don't, unless an issue explicitly says to.
 
 ## Repo owner: fill in once
-- Engine / language:
-- Build command:
-- Test command (must pass before any PR):
-- Lint / format command:
-- Then replace the example paths in the Lanes table with this repo's real directories.
+- Engine / language: TypeScript 5.9, React 19, Vinext on Vite 8, Cloudflare Workers with D1
+- Build command: `pnpm run build`
+- Test command (must pass before any PR): `node --experimental-strip-types --test tests/*.test.mjs`
+- Lint / format command: none yet
 
 ## The game
 Opal Shift is a 1v1 competitive creature-tactics game for iPhone, with compact and expanded (foldable) layouts. Each player fields three creatures. Both players set orders in secret (15 s), then all orders resolve simultaneously (5 s). Uncontested control of the objective scores a point; first to three wins. Full design reference: `docs/design/opal-shift-design.md`.
@@ -28,11 +27,11 @@ Two agents build in parallel. Each owns a lane. No agent edits files outside its
 
 | Lane | Default owner | Example paths | Scope |
 |---|---|---|---|
-| Rules & server | Claude | `sim/`, `server/` | Deterministic turn resolution, order validation, secret-order locking, turn deadlines, reconnect, match results |
-| Client & UX | Astra | `client/`, `ui/` | Rendering, camera and pan/zoom for large maps, touch order entry, compact/expanded layouts, tutorial, collection screen |
-| Contracts | Repo owner | `contracts/` | Order schema, match-state snapshot, map data schema, network messages |
-| Map content | Assigned per issue | `content/maps/` | One agent per map file at a time |
-| Shared config | Repo owner | `AGENTS.md`, `CLAUDE.md`, CI, engine/project settings, build settings | Agents propose changes in the PR description only |
+| Rules & server | Claude | `lib/game/engine.ts`, `lib/game/rooms.ts`, `app/api/rooms/`, `db/`, `drizzle/`, `tests/` | Deterministic turn resolution, order validation, secret-order locking, turn deadlines, reconnect, match results |
+| Client & UX | Astra | `app/page.tsx`, `app/globals.css`, `components/`, `hooks/`, `public/` | Rendering, camera and pan/zoom for large maps, touch order entry, compact/expanded layouts, tutorial, collection screen |
+| Contracts | Repo owner | `lib/game/engine.ts`, `lib/game/rooms.ts`, `db/schema.ts` | Order schema, match-state snapshot, map data schema, network messages; currently mixed with Rules & server |
+| Map content | Assigned per issue | `lib/game/engine.ts`, `public/art/` | One agent per map file at a time; current map coordinates are mixed with Rules & server |
+| Shared config | Repo owner | `AGENTS.md`, `CLAUDE.md`, `.github/`, `package.json`, `pnpm-lock.yaml`, `vite.config.ts`, `next.config.ts`, `tsconfig.json`, `.openai/`, `build/`, `scripts/` | Agents propose changes in the PR description only |
 
 ## Contracts
 Both lanes depend on `contracts/`. If a task needs a contract change:
