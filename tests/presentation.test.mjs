@@ -32,3 +32,9 @@ test('prism presentation uses the same five public scoring cells',()=>{
   const g=initial();assert.equal(prismStatus(g),'unclaimed');Object.assign(g.units[0],{x:7,y:4});assert.equal(prismStatus(g),'mint');Object.assign(g.units[3],{x:8,y:5});assert.equal(prismStatus(g),'contested');
   assert.ok(same({x:7,y:4},g.units[0]));
 });
+test('combat beams require both endpoints in previous and next permitted states',()=>{
+  const a=initial(),b=structuredClone(a);b.round++;b.log=['Coral Veyl hit Rookit for 1 · guarded.'];
+  const r=deriveReveal(a,b,0,[],0);assert.equal(r.strikes.length,1);assert.equal(r.strikes[0].guarded,true);assert.equal(r.units.find(t=>t.after.id==='1-0').action,'strike');
+  const hiddenNext={...b,units:b.units.filter(u=>u.id!=='1-0')};assert.equal(deriveReveal(a,hiddenNext,0,[],0).strikes.length,0);
+  const hiddenPrevious={...a,units:a.units.filter(u=>u.id!=='1-0')};assert.equal(deriveReveal(hiddenPrevious,b,0,[],0).strikes.length,0);
+});
