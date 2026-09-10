@@ -17,18 +17,32 @@ export function previewPath(from:Pos,to:Pos):Pos[] {
   }return [];
 }
 export type UnitTransition={before?:Unit;after:Unit;path:Pos[];hit:boolean;knockout:boolean;respawn:boolean;recoil:boolean;action?:Order['action']};
-export type Reveal={key:number;startedAt:number;units:UnitTransition[];scoreChanged:boolean};
+export type StrikeVisual={from:Pos;to:Pos;team:Team;guarded:boolean};
+export type Reveal={key:number;startedAt:number;units:UnitTransition[];strikes:StrikeVisual[];scoreChanged:boolean};
 // Call ONLY with engine.view(...) or the already-filtered room payload. Disappearing
 // enemies are deliberately omitted. Newly revealed enemies have no historical path.
 export function deriveReveal(previous:Game,next:Game,team:Team,ownOrders:Order[],startedAt:number):Reveal {
-  return {key:next.round,startedAt,scoreChanged:previous.score.some((s,i)=>s!==next.score[i]),units:next.units.map(after=>{
+  const strikes:StrikeVisual[]=[];
+  const provenActions=new Map<string,Order['action']>();
+  for(const line of next.log){
+    const hit=/^(Mint|Coral) (Veyl|Rookit|Klyra) hit (Veyl|Rookit|Klyra) for \d+( · guarded)?\.$/.exec(line);
+    if(!hit)continue;
+    const attackingTeam=hit[1]==='Mint'?0:1;
+    const from=next.units.find(u=>u.team===attackingTeam&&u.kind===hit[2]);
+    const to=next.units.find(u=>u.team!==attackingTeam&&u.kind===hit[3]);
+    // A public log is not permission to reconstruct a concealed endpoint.
+    if(!from||!to||![from,to].every(u=>previous.units.some(p=>p.id===u.id&&p.hp>0)))continue;
+    strikes.push({from:{x:from.x,y:from.y},to:{x:to.x,y:to.y},team:attackingTeam,guarded:!!hit[4]});
+    provenActions.set(from.id,'strike');if(hit[4])provenActions.set(to.id,'guard');
+  }
+  return {key:next.round,startedAt,strikes,scoreChanged:previous.score.some((s,i)=>s!==next.score[i]),units:next.units.map(after=>{
     const before=previous.units.find(u=>u.id===after.id);
     const knownBefore=before?.hp?before:undefined;
     const order=after.team===team?ownOrders.find(o=>o.id===after.id):undefined;
     const path=knownBefore&&after.hp?previewPath(knownBefore,after):[{x:after.x,y:after.y}];
     return {before:knownBefore,after,path,hit:!!knownBefore&&after.hp<knownBefore.hp,
       knockout:!!knownBefore&&!after.hp,respawn:!!before&&!before.hp&&!!after.hp,
-      recoil:!!order&&!!knownBefore&&same(knownBefore,after)&&!same(order.to,after),action:order?.action};
+      recoil:!!order&&!!knownBefore&&same(knownBefore,after)&&!same(order.to,after),action:order?.action??provenActions.get(after.id)};
   })};
 }
 export function pathPosition(path:Pos[],progress:number):WorldPoint {
